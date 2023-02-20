@@ -174,6 +174,8 @@ def thermal_print(qso):
         )
     elif has_fd:
         print(f"Class {fd_class} team in {section}".center(25))
+    else:
+        print("No Location Received".center(25))
     print("=========================")
 
 
