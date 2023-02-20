@@ -1,2 +1,5 @@
 adif-io
 gridtools
+python-escpos==3.0a8
+ctyparser
+pillow
