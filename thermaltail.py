@@ -10,7 +10,7 @@ from typing import Iterator
 from PIL import Image, ImageDraw, ImageFont
 
 # FILENAME_TO_WATCH = "/home/pi/followme.adi"
-FILENAME_TO_WATCH = "followme.adi"
+FILENAME_TO_WATCH = "/home/ussjoin/.local/share/WSJT-X/wsjtx_log.adi"
 
 
 class AdifToThermal:
@@ -106,39 +106,49 @@ class AdifToThermal:
             distance = distance * 0.621371  # km to miles
             distance = int(round(distance))
             bearing = int(round(bearing))
-            compass = degrees_to_cardinal(bearing)
+            compass = AdifToThermal.degrees_to_cardinal(bearing)
 
         # TODO Re-integrate Field Day logging thingies
 
-        img = Image.new("RGB", (THERMAL_WIDTH, THERMAL_HEIGHT), color=(255, 255, 255))
+        img = Image.new(
+            "RGB",
+            (AdifToThermal.THERMAL_WIDTH, AdifToThermal.THERMAL_HEIGHT),
+            color=(255, 255, 255),
+        )
         d = ImageDraw.Draw(img)
 
         # Callsign
         d.text(
-            (THERMAL_WIDTH / 2, 0.01 * THERMAL_HEIGHT),
+            (AdifToThermal.THERMAL_WIDTH / 2, 0.01 * AdifToThermal.THERMAL_HEIGHT),
             their_call,
-            fill=BLACK,
-            font=callsign_font,
+            fill=AdifToThermal.BLACK,
+            font=AdifToThermal.callsign_font,
             anchor="mt",
         )
         # (left, top, right, bottom) bounding box
         callsign_bbox = d.textbbox(
-            (THERMAL_WIDTH / 2, 0), their_call, font=callsign_font, anchor="mt"
+            (AdifToThermal.THERMAL_WIDTH / 2, 0),
+            their_call,
+            font=AdifToThermal.callsign_font,
+            anchor="mt",
         )
 
         # Mode
-        square_size = THERMAL_HEIGHT * 0.4
+        square_size = AdifToThermal.THERMAL_HEIGHT * 0.4
         d.rectangle(
-            [(0, THERMAL_HEIGHT - square_size), (square_size, THERMAL_HEIGHT)],
-            fill=WHITE,
-            outline=BLACK,
+            [
+                (0, AdifToThermal.THERMAL_HEIGHT - square_size),
+                (square_size, AdifToThermal.THERMAL_HEIGHT),
+            ],
+            fill=AdifToThermal.WHITE,
+            outline=AdifToThermal.BLACK,
             width=3,
         )
         d.text(
-            (square_size / 2, THERMAL_HEIGHT * 0.93),
+            (square_size / 2, AdifToThermal.THERMAL_HEIGHT * 0.93),
             mode,
-            fill=BLACK,
-            font=mode_font,
+            fill=AdifToThermal.BLACK,
+            font=AdifToThermal.mode_font,
             anchor="ms",
         )
 
@@ -146,27 +156,33 @@ class AdifToThermal:
         if their_grid:
             d.text(
                 (
-                    (THERMAL_WIDTH - square_size) / 2 + square_size,
-                    THERMAL_HEIGHT * 0.95,
+                    (AdifToThermal.THERMAL_WIDTH - square_size) / 2 + square_size,
+                    AdifToThermal.THERMAL_HEIGHT * 0.95,
                 ),
                 f"{distance}mi at {bearing}° ({compass})",
-                fill=BLACK,
-                font=details_font,
+                fill=AdifToThermal.BLACK,
+                font=AdifToThermal.details_font,
                 anchor="ms",
             )
         loc_bbox = d.textbbox(
-            ((THERMAL_WIDTH - square_size) / 2 + square_size, THERMAL_HEIGHT * 0.95),
+            (
+                (AdifToThermal.THERMAL_WIDTH - square_size) / 2 + square_size,
+                AdifToThermal.THERMAL_HEIGHT * 0.95,
+            ),
             f"{distance}mi at {bearing}° ({compass})",
-            font=details_font,
+            font=AdifToThermal.details_font,
             anchor="ms",
         )
 
         # Datetime (above location)
         d.text(
-            ((THERMAL_WIDTH - square_size) / 2 + square_size, loc_bbox[1] - 8),
+            (
+                (AdifToThermal.THERMAL_WIDTH - square_size) / 2 + square_size,
+                loc_bbox[1] - 8,
+            ),
             the_time.strftime("%Y-%m-%d %H:%M:%SZ"),
-            fill=BLACK,
-            font=details_font,
+            fill=AdifToThermal.BLACK,
+            font=AdifToThermal.details_font,
             anchor="ms",
         )
 
@@ -180,36 +196,43 @@ class AdifToThermal:
             dx_text = f"{short_grid} {dx_text}"
         d.text(
             (
-                (THERMAL_WIDTH - square_size) / 2 + square_size,
-                (THERMAL_HEIGHT - square_size + 1.5 * callsign_bbox[3]) / 2,
+                (AdifToThermal.THERMAL_WIDTH - square_size) / 2 + square_size,
+                (AdifToThermal.THERMAL_HEIGHT - square_size + 1.5 * callsign_bbox[3])
+                / 2,
             ),
             dx_text,
-            fill=BLACK,
-            font=details_font,
+            fill=AdifToThermal.BLACK,
+            font=AdifToThermal.details_font,
             anchor="ms",
         )
 
         # Contact Count
         d.text(
-            (square_size / 2, callsign_bbox[3] + 0.05 * THERMAL_HEIGHT),
-            f"#{self.line_count}",
-            fill=BLACK,
-            font=details_font,
+            (square_size / 2, callsign_bbox[3] + 0.05 * AdifToThermal.THERMAL_HEIGHT),
+            f"#{self.contact_count}",
+            fill=AdifToThermal.BLACK,
+            font=AdifToThermal.details_font,
             anchor="mt",
         )
 
         # Signal Report
         d.text(
-            (square_size / 2, height - square_size - 0.02 * THERMAL_HEIGHT),
+            (
+                square_size / 2,
+                AdifToThermal.THERMAL_HEIGHT
+                - square_size
+                - 0.02 * AdifToThermal.THERMAL_HEIGHT,
+            ),
             f"S{rst_s} R{rst_r}",
-            fill=BLACK,
-            font=sig_font,
+            fill=AdifToThermal.BLACK,
+            font=AdifToThermal.sig_font,
             anchor="mb",
         )
 
         # OK, print it!
         self.printer.image(img, center=True)
         self.printer.ln(count=3)
+        print(f"Printed contact with {their_call}")
 
 
 def follow(file, sleep_sec=0.1) -> Iterator[str]:
@@ -234,7 +257,7 @@ if __name__ == "__main__":
     # ^^^^ is the TEROW printer
     # It's a POS5890 printer (https://mike42.me/escpos-printer-db/#profiles/POS-5890)
     # NOTE: First-time setup: https://python-escpos.readthedocs.io/en/latest/user/installation.html
-    instance = AdifToThermal()  # (printer=Usb(0x0416, 0x5011, 0, profile="POS-5890"))
+    instance = AdifToThermal(printer=Usb(0x0416, 0x5011, 0, profile="POS-5890"))
 
     instance.load_cty("cty.dat")
     with open(FILENAME_TO_WATCH, "r") as file:
