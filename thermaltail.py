@@ -12,6 +12,7 @@ from PIL import Image, ImageDraw, ImageFont
 # FILENAME_TO_WATCH = "/home/pi/followme.adi"
 FILENAME_TO_WATCH = "/home/ussjoin/.local/share/WSJT-X/wsjtx_log.adi"
 
+TEST = False
 
 class AdifToThermal:
     callsign_font = ImageFont.truetype("orbitron-light-webfont.ttf", 72)
@@ -91,6 +92,7 @@ class AdifToThermal:
         the_time = adif_io.time_off(qso)
         band = qso.get("BAND")
         power = qso.get("TX_PWR")
+        freq = qso.get("FREQ")
         mode = qso["MODE"]
         # FT4 registers from WSJTX as mode MFSK, submode FT4
         if mode == "MFSK":
@@ -178,10 +180,40 @@ class AdifToThermal:
         d.text(
             (
                 (AdifToThermal.THERMAL_WIDTH - square_size) / 2 + square_size,
-                loc_bbox[1] - 8,
+                loc_bbox[1] - 7,
             ),
             the_time.strftime("%Y-%m-%d %H:%M:%SZ"),
             fill=AdifToThermal.BLACK,
+            font=AdifToThermal.details_font,
+            anchor="ms",
+        )
+        datetime_bbox = d.textbbox(
+            (
+                (AdifToThermal.THERMAL_WIDTH - square_size) / 2 + square_size,
+                loc_bbox[1] - 7,
+            ),
+            the_time.strftime("%Y-%m-%d %H:%M:%SZ"),
+            font=AdifToThermal.details_font,
+            anchor="ms",
+        )
+        
+        # Frequency (above datetime)
+        d.text(
+            (
+                (AdifToThermal.THERMAL_WIDTH - square_size) / 2 + square_size,
+                datetime_bbox[1] - 7,
+            ),
+            f"{freq} MHz",
+            fill=AdifToThermal.BLACK,
+            font=AdifToThermal.details_font,
+            anchor="ms",
+        )
+        freq_bbox = d.textbbox(
+            (
+                (AdifToThermal.THERMAL_WIDTH - square_size) / 2 + square_size,
+                datetime_bbox[1] - 7,
+            ),
+            f"{freq} MHz",
             font=AdifToThermal.details_font,
             anchor="ms",
         )
@@ -197,8 +229,7 @@ class AdifToThermal:
         d.text(
             (
                 (AdifToThermal.THERMAL_WIDTH - square_size) / 2 + square_size,
-                (AdifToThermal.THERMAL_HEIGHT - square_size + 1.5 * callsign_bbox[3])
-                / 2,
+                freq_bbox[1] - 7,
             ),
             dx_text,
             fill=AdifToThermal.BLACK,
@@ -230,8 +261,12 @@ class AdifToThermal:
         )
 
         # OK, print it!
-        self.printer.image(img, center=True)
-        self.printer.ln(count=3)
+        
+        if not TEST:
+            self.printer.image(img, center=True)
+            self.printer.ln(count=3)
+        else:
+            img.save("testimg.png")
         print(f"Printed contact with {their_call}")
 
 
@@ -253,16 +288,27 @@ def follow(file, sleep_sec=0.1) -> Iterator[str]:
 
 
 if __name__ == "__main__":
-    # Bus 001 Device 004: ID 0416:5011 Winbond Electronics Corp. Virtual Com Port
-    # ^^^^ is the TEROW printer
+    
+    # TEROW printer I have: printer=Usb(0x0416, 0x5011, 0, profile="POS-5890"
     # It's a POS5890 printer (https://mike42.me/escpos-printer-db/#profiles/POS-5890)
+    # Bluetooth printer (I connect to over USB) I have: printer=Usb(0x0483, 0x5720, 0)
     # NOTE: First-time setup: https://python-escpos.readthedocs.io/en/latest/user/installation.html
-    instance = AdifToThermal(printer=Usb(0x0416, 0x5011, 0, profile="POS-5890"))
+    
+    if not TEST:
+        #instance = AdifToThermal(printer=Usb(0x0416, 0x5011, 0, profile="POS-5890"))
+        instance = AdifToThermal(printer=Usb(0x0483, 0x5720, 0))
+    else:
+        instance = AdifToThermal()
 
     instance.load_cty("cty.dat")
-    with open(FILENAME_TO_WATCH, "r") as file:
-        initial_lines = file.readlines()
-        line_count = instance.load_previous_contact_count(initial_lines)
-        print(f"Initial line count: {instance.contact_count}")
-        for line in follow(file):
-            instance.print_contact(line)
+    
+    if TEST:
+        instance.contact_count = 5
+        instance.print_contact("<call:5>AG6QV <gridsquare:4>CN87 <mode:3>FT8 <rst_sent:3>-13 <rst_rcvd:3>-10 <qso_date:8>20230101 <time_on:6>002230 <qso_date_off:8>20230101 <time_off:6>002330 <band:3>12m <freq:9>24.917699 <station_callsign:4>K3QB <my_gridsquare:6>CN87UM <tx_pwr:3>50w <comment:21>Aerial-51 807-HD 10ft <eor>")
+    else:
+        with open(FILENAME_TO_WATCH, "r") as file:
+            initial_lines = file.readlines()
+            line_count = instance.load_previous_contact_count(initial_lines)
+            print(f"Initial line count: {instance.contact_count}")
+            for line in follow(file):
+                instance.print_contact(line)
